@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+        <meta charset="utf-8">
+        <title>Raphaël · Polar Clock</title>
+        <link rel="stylesheet" href="css/demo.css" media="screen">
+        <link rel="stylesheet" href="css/demo-print.css" media="print">
+        <script src="js/raphael.js"></script>
+        <script>
+            window.onload = function () {
+                var r = Raphael("holder", 300, 300),
+                    R = 100,
+                    init = true,
+                    param = {stroke: "#fff", "stroke-width": 15},
+                    hash = document.location.hash,
+                    marksAttr = {fill: hash || "#444", stroke: "none"},
+                    html = [
+                        document.getElementById("h"),
+                        document.getElementById("m"),
+                        document.getElementById("s"),
+                        document.getElementById("d"),
+                        document.getElementById("mnth"),
+                        document.getElementById("ampm")
+                    ];
+                // Custom Attribute
+                r.customAttributes.arc = function (value, total, R) {
+                    var alpha = 360 / total * value,
+                        a = (90 - alpha) * Math.PI / 180,
+                        x = 150 + R * Math.cos(a),
+                        y = 150 - R * Math.sin(a),
+                        color = "hsb(".concat(Math.round(R) / 100, ",", value / total, ", .75)"),
+                        path;
+                    if (total == value) {
+                        path = [["M", 150, 150 - R], ["A", R, R, 0, 1, 1, 149.99, 150 - R]];
+                    } else {
+                        path = [["M", 150, 150 - R], ["A", R, R, 0, +(alpha > 180), 1, x, y]];
+                    }
+                    return {path: path, stroke: color};
+                };
+
+                drawMarks(R, 60);
+                var sec = r.path().attr(param).attr({arc: [0, 60, R]});
+                R -= 20;
+                drawMarks(R, 60);
+                var min = r.path().attr(param).attr({arc: [0, 60, R]});
+                R -= 20;
+                drawMarks(R, 12);
+                var hor = r.path().attr(param).attr({arc: [0, 12, R]});
+                R -= 20;
+                drawMarks(R, 31);
+                var day = r.path().attr(param).attr({arc: [0, 31, R]});
+                R -= 20;
+                drawMarks(R, 12);
+                var mon = r.path().attr(param).attr({arc: [0, 12, R]});
+                var pm = r.circle(150, 150, 8).attr({stroke: "none", fill: Raphael.hsb2rgb(15 / 100, 1, .75).hex});
+                html[5].style.color = Raphael.hsb2rgb(15 / 100, 1, .75).hex;
+
+                function updateVal(value, total, R, hand, id) {
+                    if (total == 31) { // month
+                        var d = new Date;
+                        d.setDate(1);
+                        d.setMonth(d.getMonth() + 1);
+                        d.setDate(-1);
+                        total = d.getDate();
+                    }
+                    var color = "hsb(".concat(Math.round(R) / 100, ",", value / total, ", .75)");
+                    if (init) {
+                        hand.animate({arc: [value, total, R]}, 450, ">");
+                    } else {
+                        if (!value || value == total) {
+                            value = total;
+                            hand.animate({arc: [value, total, R]}, 375, "bounce", function () {
+                                hand.attr({arc: [0, total, R]});
+                            });
+                        } else {
+                            hand.animate({arc: [value, total, R]}, 375, "elastic");
+                        }
+                    }
+                    html[id].innerHTML = (value < 10 ? "0" : "") + value;
+                    html[id].style.color = Raphael.getRGB(color).hex;
+                }
+
+                function drawMarks(R, total) {
+                    if (total == 31) { // month
+                        var d = new Date;
+                        d.setDate(1);
+                        d.setMonth(d.getMonth() + 1);
+                        d.setDate(-1);
+                        total = d.getDate();
+                    }
+                    var color = "hsb(".concat(Math.round(R) / 100, ", 1, .75)"),
+                        out = r.set();
+                    for (var value = 0; value < total; value++) {
+                        var alpha = 360 / total * value,
+                            a = (90 - alpha) * Math.PI / 180,
+                            x = 150 + R * Math.cos(a),
+                            y = 150 - R * Math.sin(a);
+                        out.push(r.circle(x, y, 2).attr(marksAttr));
+                    }
+                    return out;
+                }
+
+                (function () {
+                    var d = new Date,
+                        am = (d.getHours() < 12),
+                        h = d.getHours() % 12 || 12;
+                    updateVal(d.getSeconds(), 60, 100, sec, 2);
+                    updateVal(d.getMinutes(), 60, 80, min, 1);
+                    updateVal(h, 12, 60, hor, 0);
+                    updateVal(d.getDate(), 31, 40, day, 3);
+                    updateVal(d.getMonth() + 1, 12, 20, mon, 4);
+                    pm[(am ? "hide" : "show")]();
+                    html[5].innerHTML = am ? "AM" : "PM";
+                    setTimeout(arguments.callee, 1000);
+                    init = false;
+                })();
+            };
+        </script>
+        <style media="screen">
+            #holder {
+                height: 300px;
+                margin: -150px 0 0 -150px;
+                width: 300px;
+            }
+            #time {
+                text-align: center;
+                font: 100 1.5em "Helvetica Neue", Helvetica, Arial, sans-serif;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="holder"></div>
+        <div id="time"><span id="h"></span>:<span id="m"></span>:<span id="s"></span> <span id="ampm"></span> · <span id="d"></span>/<span id="mnth"></span></div>
+</body></html>
